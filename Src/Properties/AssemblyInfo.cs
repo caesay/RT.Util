@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Util")]
-[assembly: AssemblyDescription("Utility functions and classes")]
+[assembly: AssemblyTitle("RT.Classify")]
+[assembly: AssemblyDescription("An extendable object serializer.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("RT")]
-[assembly: AssemblyProduct("Util")]
+[assembly: AssemblyProduct("Classify")]
 [assembly: AssemblyCopyright("Copyright © RT 2006")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("4815cc8f-28e9-4e4e-b2ff-3db13d8de04a")]
+[assembly: Guid("448148ef-7df1-4463-8c5c-eb3d9660dd8f")]
 
 // Version information for an assembly consists of the following four values:
 //

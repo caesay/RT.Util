@@ -70,7 +70,7 @@
     <Compile Include="Serialization\Classify.cs" />
     <Compile Include="Serialization\ClassifyBinary.cs" />
     <Compile Include="Serialization\ClassifyXml.cs" />
-    <Compile Include="IClassifyFormat.cs" />
+    <Compile Include="Serialization\IClassifyFormat.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Util.cs" />
   </ItemGroup>
