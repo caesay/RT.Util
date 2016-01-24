@@ -2,9 +2,10 @@
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using RT.Util.ExtensionMethods;
+using System.Text.RegularExpressions;
+using RT.Classify.ExtensionMethods;
 
-namespace RT.Util
+namespace RT.Classify
 {
     /// <summary>
     /// <para>
@@ -66,7 +67,7 @@ namespace RT.Util
     /// * NaN
     /// </code>
     /// </remarks>
-    public static class ExactConvert
+    internal static class ExactConvert
     {
         private static readonly bool[] _isIntegerType;
         private static readonly bool[] _isUnsignedType;
@@ -227,7 +228,7 @@ namespace RT.Util
                             throw new InvalidOperationException("Unexpected DateTime.Kind while unboxing it to a long.");
                     }
                 default:
-                    throw new InvalidOperationException("Cannot unbox an object of type {0} to a long.".Fmt(typeCode));
+                    throw new InvalidOperationException($"Cannot unbox an object of type {typeCode} to a long.");
             }
         }
 
@@ -1729,17 +1730,15 @@ namespace RT.Util
     /// <summary>
     /// Represents an exception thrown in the case of conversion failure when using <see cref="ExactConvert"/>.
     /// </summary>
-    public sealed class ExactConvertException : RTException
+    public sealed class ExactConvertException : Exception
     {
         /// <summary>
         /// Initialises an exception to represent conversion failure when using <see cref="ExactConvert"/>.
         /// </summary>
         public ExactConvertException(object value, Type targetType)
+            : base(string.Format($"Cannot do an exact conversion from value \"{ExactConvert.GetTypeCode(value)}\" " +
+                                 $"of type \"{Type.GetTypeCode(targetType)}\" to type \"{value}\"."))
         {
-            TypeCode from = ExactConvert.GetTypeCode(value);
-            TypeCode to = Type.GetTypeCode(targetType);
-            _message = string.Format("Cannot do an exact conversion from value \"{2}\" of type \"{0}\" to type \"{1}\".", from, to, value);
         }
     }
-
 }

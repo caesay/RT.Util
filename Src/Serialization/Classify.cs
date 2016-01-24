@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using RT.Util.ExtensionMethods;
+using RT.Classify.ExtensionMethods;
 
 /*
  * Provide a proper way to distinguish exceptions due to the caller breaking some contract from exceptions due to data load failures. Always pass through the former.
@@ -13,7 +13,7 @@ using RT.Util.ExtensionMethods;
  * Built-in versioning support (e.g. in XML, using attribute like ver="1"), an IClassifyVersioned { Version { get } }, and passing it to IClassify[Object/Type]Processor<TElement>
  */
 
-namespace RT.Util.Serialization
+namespace RT.Classify
 {
     /// <summary>
     ///     Provides static methods to represent objects of (almost) arbitrary classes in various formats (such as XML or
@@ -55,7 +55,7 @@ namespace RT.Util.Serialization
     ///         <item><description>
     ///             Classify handles values of the type of the serialized form specially. For example, if you are serializing
     ///             to XML, serializing an <see cref="System.Xml.Linq.XElement"/> object generates the XML directly; if you
-    ///             are classifying to JSON, the same goes for <see cref="RT.Util.Json.JsonValue"/> objects, etc.</description></item>
+    ///             are classifying to JSON, the same goes for <see cref="JsonValue"/> objects, etc.</description></item>
     ///         <item><description>
     ///             For classes that don’t implement any of the above-mentioned collection interfaces, Classify supports
     ///             polymorphism. The actual type of an instance is persisted if it is different from the declared type.</description></item>
@@ -129,7 +129,7 @@ namespace RT.Util.Serialization
         ///     A new instance of the requested type.</returns>
         public static T DeserializeFile<TElement, T>(string filename, IClassifyFormat<TElement> format, ClassifyOptions options = null)
         {
-            return (T) DeserializeFile(typeof(T), filename, format, options);
+            return (T)DeserializeFile(typeof(T), filename, format, options);
         }
 
         /// <summary>
@@ -170,7 +170,7 @@ namespace RT.Util.Serialization
         ///     A new instance of the requested type.</returns>
         public static T Deserialize<TElement, T>(TElement elem, IClassifyFormat<TElement> format, ClassifyOptions options = null)
         {
-            return (T) new classifier<TElement>(format, options).Deserialize(typeof(T), elem);
+            return (T)new classifier<TElement>(format, options).Deserialize(typeof(T), elem);
         }
 
         /// <summary>
@@ -270,7 +270,7 @@ namespace RT.Util.Serialization
         public static void SerializeToFile<TElement>(Type saveType, object saveObject, string filename, IClassifyFormat<TElement> format, ClassifyOptions options = null)
         {
             var element = new classifier<TElement>(format, options).Serialize(saveObject, saveType)();
-            PathUtil.CreatePathToFile(filename);
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(".", filename)));
             using (var f = File.Open(filename, FileMode.Create, FileAccess.Write, FileShare.Read))
                 format.WriteToStream(element, f);
         }
@@ -415,10 +415,10 @@ namespace RT.Util.Serialization
                     {
                         retrieved = true;
                         retrievedObj = res();
-                        retrievedObj.IfType((IClassifyObjectProcessor obj) => { obj.AfterDeserialize(); });
-                        retrievedObj.IfType((IClassifyObjectProcessor<TElement> obj) => { obj.AfterDeserialize(elem); });
-                        typeOptions.IfType((IClassifyTypeProcessor opt) => { opt.AfterDeserialize(retrievedObj); });
-                        typeOptions.IfType((IClassifyTypeProcessor<TElement> opt) => { opt.AfterDeserialize(retrievedObj, elem); });
+                        (retrievedObj as IClassifyObjectProcessor)?.AfterDeserialize();
+                        (retrievedObj as IClassifyObjectProcessor<TElement>)?.AfterDeserialize(elem);
+                        (typeOptions as IClassifyTypeProcessor)?.AfterDeserialize(retrievedObj);
+                        (typeOptions as IClassifyTypeProcessor<TElement>)?.AfterDeserialize(retrievedObj, elem);
                     }
                     return retrievedObj;
                 };
@@ -431,7 +431,7 @@ namespace RT.Util.Serialization
                 {
                     if (typeOptions._substituteType != null)
                         throw new InvalidOperationException("Cannot use type substitution when populating a provided object.");
-                    typeOptions.IfType((IClassifyTypeProcessor<TElement> opt) => { opt.BeforeDeserialize(elem); });
+                    (typeOptions as IClassifyTypeProcessor<TElement>)?.BeforeDeserialize(elem);
                 }
 
                 _doAtTheEnd = new List<Action>();
@@ -444,10 +444,10 @@ namespace RT.Util.Serialization
                     action();
                 result();
 
-                intoObj.IfType((IClassifyObjectProcessor obj) => { obj.AfterDeserialize(); });
-                intoObj.IfType((IClassifyObjectProcessor<TElement> obj) => { obj.AfterDeserialize(elem); });
-                typeOptions.IfType((IClassifyTypeProcessor opt) => { opt.AfterDeserialize(intoObj); });
-                typeOptions.IfType((IClassifyTypeProcessor<TElement> opt) => { opt.AfterDeserialize(intoObj, elem); });
+                (intoObj as IClassifyObjectProcessor)?.AfterDeserialize();
+                (intoObj as IClassifyObjectProcessor<TElement>)?.AfterDeserialize(elem);
+                (typeOptions as IClassifyTypeProcessor)?.AfterDeserialize(intoObj);
+                (typeOptions as IClassifyTypeProcessor<TElement>)?.AfterDeserialize(intoObj, elem);
             }
 
             /// <summary>
@@ -473,11 +473,11 @@ namespace RT.Util.Serialization
                 {
                     if (typeOptions._substituteType != null)
                         substType = typeOptions._substituteType;
-                    typeOptions.IfType((IClassifyTypeProcessor<TElement> opt) => { opt.BeforeDeserialize(elem); });
+                    (typeOptions as IClassifyTypeProcessor<TElement>)?.BeforeDeserialize(elem);
                 }
-
+                
                 // Every object created by declassify goes through this function
-                var cleanUp = Ut.Lambda((Func<object> res) =>
+                var cleanUp = new Func<Func<object>, Func<object>>((res) =>
                 {
                     var withoutDesubstitution = cachify(res, elem, typeOptions);
                     Func<object> withDesubstitution = null;
@@ -524,7 +524,7 @@ namespace RT.Util.Serialization
                             ?? declaredType.Assembly.GetType(typeName) ?? declaredType.Assembly.GetType((substType.Namespace == null ? null : substType.Namespace + ".") + typeName)
                             ?? substType.Assembly.GetType(typeName) ?? substType.Assembly.GetType((substType.Namespace == null ? null : substType.Namespace + ".") + typeName);
                     if (serializedType == null)
-                        throw new Exception("The type {0} needed for deserialization cannot be found.".Fmt(typeName));
+                        throw new Exception($"The type {typeName} needed for deserialization cannot be found.");
                 }
                 var genericDefinition = serializedType.IsGenericType ? serializedType.GetGenericTypeDefinition() : null;
 
@@ -555,7 +555,7 @@ namespace RT.Util.Serialization
                         values = _format.GetList(elem, genericArguments.Length).ToArray();
 
                     if (genericArguments.Length > values.Length)
-                        throw new InvalidOperationException("While trying to deserialize a tuple with {0} elements, Classify encountered a serialized form with only {1} elements.".Fmt(genericArguments.Length, values.Length));
+                        throw new InvalidOperationException($"While trying to deserialize a tuple with {genericArguments.Length} elements, Classify encountered a serialized form with only {values.Length} elements.");
 
                     int i = -1;
                     return prevResult =>
@@ -604,7 +604,7 @@ namespace RT.Util.Serialization
                             else
                                 outputDict = Activator.CreateInstance(genericDefinition == typeof(IDictionary<,>) ? typeof(Dictionary<,>).MakeGenericType(keyType, valueType) : serializedType);
 
-                            outputDict.IfType((IClassifyObjectProcessor<TElement> dict) => { dict.BeforeDeserialize(elem); });
+                            (outputDict as IClassifyObjectProcessor<TElement>)?.BeforeDeserialize(elem);
 
                             var addMethod = typeof(IDictionary<,>).MakeGenericType(keyType, valueType).GetMethod("Add", new Type[] { keyType, valueType });
                             var e = _format.GetDictionary(elem).GetEnumerator();
@@ -622,7 +622,9 @@ namespace RT.Util.Serialization
                                     return deserialize(valueType, e.Current.Value, null, enforceEnums);
                                 }
 
-                                Ut.Assert(keysToAdd.Count == valuesToAdd.Count);
+                                if (keysToAdd.Count != valuesToAdd.Count)
+                                    throw new Exception("Internal assertion failure.");
+
                                 _doAtTheEnd.Add(() =>
                                 {
                                     for (int i = 0; i < keysToAdd.Count; i++)
@@ -639,7 +641,7 @@ namespace RT.Util.Serialization
                         else if (serializedType.IsArray)
                         {
                             var input = _format.GetList(elem, null).ToArray();
-                            var outputArray = (already != null && ((Array) already).GetLength(0) == input.Length) ? already : serializedType.GetConstructor(new Type[] { typeof(int) }).Invoke(new object[] { input.Length });
+                            var outputArray = (already != null && ((Array)already).GetLength(0) == input.Length) ? already : serializedType.GetConstructor(new Type[] { typeof(int) }).Invoke(new object[] { input.Length });
                             var setMethod = serializedType.GetMethod("Set", new Type[] { typeof(int), valueType });
                             var i = -1;
                             var setters = new Func<object>[input.Length];
@@ -674,7 +676,7 @@ namespace RT.Util.Serialization
                             else
                                 outputList = Activator.CreateInstance(genericDefinition == typeof(ICollection<>) || genericDefinition == typeof(IList<>) ? typeof(List<>).MakeGenericType(valueType) : serializedType);
 
-                            outputList.IfType((IClassifyObjectProcessor<TElement> list) => { list.BeforeDeserialize(elem); });
+                            (outputList as IClassifyObjectProcessor<TElement>)?.BeforeDeserialize(elem);
 
                             var addMethod = typeof(ICollection<>).MakeGenericType(valueType).GetMethod("Add", new Type[] { valueType });
                             var e = _format.GetList(elem, null).GetEnumerator();
@@ -711,7 +713,7 @@ namespace RT.Util.Serialization
                             if (already != null && already.GetType() == serializedType)
                                 ret = already;
                             // Anonymous types
-                            else if (serializedType.Name.StartsWith("<>f__AnonymousType") && serializedType.IsGenericType && serializedType.IsDefined<CompilerGeneratedAttribute>())
+                            else if (serializedType.Name.StartsWith("<>f__AnonymousType") && serializedType.IsGenericType && serializedType.IsDefined(typeof(CompilerGeneratedAttribute), false))
                             {
                                 var constructor = serializedType.GetConstructors().First();
                                 ret = constructor.Invoke(constructor.GetParameters().Select(p => p.ParameterType.GetDefaultValue()).ToArray());
@@ -721,7 +723,7 @@ namespace RT.Util.Serialization
                         }
                         catch (Exception e)
                         {
-                            throw new Exception("An object of type {0} could not be created:\n{1}".Fmt(serializedType.FullName, e.Message), e);
+                            throw new Exception($"An object of type {serializedType.FullName} could not be created:\n{e.Message}", e);
                         }
 
                         var first = true;
@@ -749,7 +751,7 @@ namespace RT.Util.Serialization
 
             private WorkNode<Func<object>> deserializeIntoObject(TElement elem, object intoObj, Type type)
             {
-                intoObj.IfType((IClassifyObjectProcessor<TElement> obj) => { obj.BeforeDeserialize(elem); });
+                (intoObj as IClassifyObjectProcessor<TElement>)?.BeforeDeserialize(elem);
 
                 var infos = new List<deserializeFieldInfo>();
 
@@ -839,12 +841,12 @@ namespace RT.Util.Serialization
 
             private bool allowEnumValue(Type enumType, object enumValue)
             {
-                if (!enumType.IsDefined<FlagsAttribute>())
+                if (!enumType.IsDefined(typeof(FlagsAttribute), false))
                     return Array.IndexOf(Enum.GetValues(enumType), enumValue) != -1;
 
                 if (Enum.GetUnderlyingType(enumType) == typeof(ulong))
                 {
-                    var ulongValue = (ulong) enumValue;
+                    var ulongValue = (ulong)enumValue;
                     foreach (ulong allowedValue in Enum.GetValues(enumType))
                         ulongValue &= ~allowedValue;
                     return ulongValue == 0;
@@ -873,7 +875,7 @@ namespace RT.Util.Serialization
                 {
                     saveType = saveObject.GetType();
                     if (saveType == typeof(IntPtr) || saveType == typeof(Pointer))
-                        throw new NotSupportedException("Classify does not support serializing values of type \"{0}\". Consider marking the offending field with [ClassifyIgnore].".Fmt(saveType));
+                        throw new NotSupportedException($"Classify does not support serializing values of type \"{saveType}\". Consider marking the offending field with [ClassifyIgnore].");
                     if (declaredType != saveType && !(saveType.IsValueType && declaredType == typeof(Nullable<>).MakeGenericType(saveType)))
                     {
                         // ... but only add this attribute if it is not a collection, because then Classify doesn’t care about the type when restoring the object anyway
@@ -926,14 +928,14 @@ namespace RT.Util.Serialization
                 if (saveObject == null)
                     return () => _format.FormatNullValue();
 
-                saveObject.IfType((IClassifyObjectProcessor obj) => { obj.BeforeSerialize(); });
-                saveObject.IfType((IClassifyObjectProcessor<TElement> obj) => { obj.BeforeSerialize(); });
-                typeOptions.IfType((IClassifyTypeProcessor opt) => { opt.BeforeSerialize(saveObject); });
-                typeOptions.IfType((IClassifyTypeProcessor<TElement> opt) => { opt.BeforeSerialize(saveObject); });
+                (saveObject as IClassifyObjectProcessor)?.BeforeSerialize();
+                (saveObject as IClassifyObjectProcessor<TElement>)?.BeforeSerialize();
+                (typeOptions as IClassifyTypeProcessor)?.BeforeSerialize(saveObject);
+                (typeOptions as IClassifyTypeProcessor<TElement>)?.BeforeSerialize(saveObject);
 
                 if (typeof(TElement).IsAssignableFrom(saveType))
                 {
-                    elem = () => _format.FormatSelfValue((TElement) saveObject);
+                    elem = () => _format.FormatSelfValue((TElement)saveObject);
                     typeStr = null;
                 }
                 else if (_simpleTypes.Contains(saveType) || saveType.IsEnum)
@@ -984,7 +986,7 @@ namespace RT.Util.Serialization
                         if (keyProperty == null || valueProperty == null)
                             throw new InvalidOperationException("Cannot find Key or Value property in KeyValuePair type.");
 
-                        var kvps = ((IEnumerable) saveObject).Cast<object>().Select(kvp => new
+                        var kvps = ((IEnumerable)saveObject).Cast<object>().Select(kvp => new
                         {
                             Key = keyProperty.GetValue(kvp, null),
                             GetValue = Serialize(valueProperty.GetValue(kvp, null), valueType)
@@ -995,7 +997,7 @@ namespace RT.Util.Serialization
                     {
                         // It’s an array or collection
                         var valueType = saveType.IsArray ? saveType.GetElementType() : typeParameters[0];
-                        var items = ((IEnumerable) saveObject).Cast<object>().Select(val => Serialize(val, valueType)).ToArray();
+                        var items = ((IEnumerable)saveObject).Cast<object>().Select(val => Serialize(val, valueType)).ToArray();
                         elem = () => _format.FormatList(false, items.Select(item => item()));
                     }
                     else
@@ -1026,8 +1028,8 @@ namespace RT.Util.Serialization
                             int refId;
                             if (_requireRefId.TryGetValue(originalObject, out refId) || _requireRefId.TryGetValue(saveObject, out refId))
                                 retrievedElem = _format.FormatReferable(retrievedElem, refId);
-                            saveObject.IfType((IClassifyObjectProcessor<TElement> obj) => { obj.AfterSerialize(retrievedElem); });
-                            typeOptions.IfType((IClassifyTypeProcessor<TElement> opt) => { opt.AfterSerialize(saveObject, retrievedElem); });
+                            (saveObject as IClassifyObjectProcessor<TElement>)?.AfterSerialize(retrievedElem);
+                            (typeOptions as IClassifyTypeProcessor<TElement>)?.AfterSerialize(saveObject, retrievedElem);
                         }
                         return retrievedElem;
                     };
@@ -1038,8 +1040,8 @@ namespace RT.Util.Serialization
 
             private IEnumerable<ObjectFieldInfo<Func<TElement>>> serializeObject(object saveObject, Type saveType)
             {
-                bool ignoreIfDefaultOnType = saveType.IsDefined<ClassifyIgnoreIfDefaultAttribute>(true);
-                bool ignoreIfEmptyOnType = saveType.IsDefined<ClassifyIgnoreIfEmptyAttribute>(true);
+                bool ignoreIfDefaultOnType = saveType.IsDefined(typeof(ClassifyIgnoreIfDefaultAttribute), true);
+                bool ignoreIfEmptyOnType = saveType.IsDefined(typeof(ClassifyIgnoreIfEmptyAttribute), true);
 
                 var results = new List<Tuple<string, Type, Func<TElement>>>();
                 var namesAlreadySeen = new HashSet<string>();
@@ -1048,7 +1050,7 @@ namespace RT.Util.Serialization
                 foreach (var field in saveType.GetAllFields())
                 {
                     if (field.FieldType == saveType && saveType.IsValueType)
-                        throw new InvalidOperationException(@"Cannot serialize an instance of the type {0} because it is a value type that contains itself.".Fmt(saveType.FullName));
+                        throw new InvalidOperationException($"Cannot serialize an instance of the type {saveType.FullName} because it is a value type that contains itself.");
 
                     // Ignore the backing field for events
                     if (typeof(Delegate).IsAssignableFrom(field.FieldType) && saveType.GetEvent(field.Name, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance) != null)
@@ -1095,7 +1097,7 @@ namespace RT.Util.Serialization
 
                     // Arrays, lists and dictionaries all implement ICollection
                     bool ignoreIfEmpty = ignoreIfEmptyOnType || attrs.OfType<ClassifyIgnoreIfEmptyAttribute>().Any();
-                    if (ignoreIfEmpty && saveValue is ICollection && ((ICollection) saveValue).Count == 0)
+                    if (ignoreIfEmpty && saveValue is ICollection && ((ICollection)saveValue).Count == 0)
                         continue;
 
                     if (!namesAlreadySeen.Add(rFieldName))
@@ -1122,115 +1124,6 @@ namespace RT.Util.Serialization
                 foreach (var result in results)
                     yield return new ObjectFieldInfo<Func<TElement>>(result.Item1, needsDeclaringType.Contains(result.Item1) ? result.Item2.AssemblyQualifiedName : null, result.Item3);
             }
-        }
-
-        /// <summary>
-        ///     Performs safety checks to ensure that a specific type doesn't cause Classify exceptions. Run this method as a
-        ///     post-build step to ensure reliability of execution. For an example of use, see <see
-        ///     cref="Ut.RunPostBuildChecks"/>.</summary>
-        /// <typeparam name="T">
-        ///     The type that must be Classify-able.</typeparam>
-        /// <param name="rep">
-        ///     Object to report post-build errors to.</param>
-        public static void PostBuildStep<T>(IPostBuildReporter rep)
-        {
-            PostBuildStep(typeof(T), rep);
-        }
-
-        /// <summary>
-        ///     Performs safety checks to ensure that a specific type doesn't cause Classify exceptions. Run this method as a
-        ///     post-build step to ensure reliability of execution. For an example of use, see <see
-        ///     cref="Ut.RunPostBuildChecks"/>.</summary>
-        /// <param name="type">
-        ///     The type that must be Classify-able.</param>
-        /// <param name="rep">
-        ///     Object to report post-build errors to.</param>
-        public static void PostBuildStep(Type type, IPostBuildReporter rep)
-        {
-            object instance;
-            try
-            {
-                instance = Activator.CreateInstance(type, true);
-            }
-            catch (MissingMethodException)
-            {
-                rep.Error("The type {0} does not have a parameterless constructor.".Fmt(type.FullName), "class", type.Name);
-                return;
-            }
-            postBuildStep(type, instance, null, rep, new HashSet<Type>(), Enumerable.Empty<string>());
-        }
-
-        private static void postBuildStep(Type type, object instance, MemberInfo member, IPostBuildReporter rep, HashSet<Type> alreadyChecked, IEnumerable<string> chain)
-        {
-            ClassifyTypeOptions opts;
-            if (DefaultOptions._typeOptions.TryGetValue(type, out opts) && opts._substituteType != null)
-            {
-                postBuildStep(opts._substituteType, opts._toSubstitute(instance), member, rep, alreadyChecked, chain.Concat("Type substitution: " + opts._substituteType.FullName));
-                return;
-            }
-
-            if (!alreadyChecked.Add(type))
-                return;
-
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
-            {
-                postBuildStep(type.GetGenericArguments()[0], instance, member, rep, alreadyChecked, chain);
-                return;
-            }
-
-            Type[] genericTypeArguments;
-            if (type.TryGetInterfaceGenericParameters(typeof(IDictionary<,>), out genericTypeArguments) || type.TryGetInterfaceGenericParameters(typeof(ICollection<>), out genericTypeArguments))
-            {
-                foreach (var typeArg in genericTypeArguments)
-                    postBuildStep(typeArg, null, member, rep, alreadyChecked, chain.Concat("Dictionary type argument " + typeArg.FullName));
-                return;
-            }
-
-            if (type == typeof(Pointer) || type == typeof(IntPtr) || type.IsPointer || type.IsByRef)
-            {
-                if (member == null)
-                    rep.Error("Classify cannot serialize the type {0}. Use [ClassifyIgnore] to mark the field as not to be serialized".Fmt(type.FullName, chain.JoinString(", ")));
-                else
-                    rep.Error("Classify cannot serialize the type {0}, used by field {1}.{2}. Use [ClassifyIgnore] to mark the field as not to be serialized. Chain: {3}".Fmt(type.FullName, member.DeclaringType.FullName, member.Name, chain.JoinString(", ")), member.DeclaringType.Name, member.Name);
-                return;
-            }
-
-            if (_simpleTypes.Contains(type))
-                return; // these are safe
-
-            if (!type.IsAbstract)
-            {
-                if (instance == null && !type.IsValueType && type.GetConstructor(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null) == null)
-                    rep.Error(
-                        "The {3} {0}.{1} is set to null by default, and its type, {2}, does not have a parameterless constructor. Assign a non-null instance to the field in {0}'s constructor or declare a parameterless constructor in {2}. (Chain: {4})"
-                            .Fmt(member.NullOr(m => m.DeclaringType.FullName), member.NullOr(m => m.Name), type.FullName, member is FieldInfo ? "field" : "property",
-                                chain.JoinString(", ")),
-                        member.NullOr(m => m.DeclaringType.Name), member.NullOr(m => m.Name));
-                else
-                {
-                    var inst = instance ?? (type.ContainsGenericParameters ? null : Activator.CreateInstance(type, true));
-                    foreach (var f in type.GetAllFields())
-                    {
-                        MemberInfo m = f;
-                        if (f.Name[0] == '<' && f.Name.EndsWith(">k__BackingField"))
-                        {
-                            var pName = f.Name.Substring(1, f.Name.Length - "<>k__BackingField".Length);
-                            m = type.GetAllProperties().FirstOrDefault(p => p.Name == pName) ?? (MemberInfo) f;
-                        }
-                        // Skip events
-                        else if (type.GetEvent(f.Name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance) != null)
-                            continue;
-
-                        if (m.IsDefined<ClassifyIgnoreAttribute>())
-                            continue;
-                        postBuildStep(f.FieldType, inst == null ? null : f.GetValue(inst), m, rep, alreadyChecked, chain.Concat(m.DeclaringType.FullName + "." + m.Name));
-                    }
-                }
-            }
-            if (type != typeof(object))
-                foreach (var derivedType in type.Assembly.GetTypes())
-                    if (type.IsAssignableFrom(derivedType))
-                        postBuildStep(derivedType, null, member, rep, alreadyChecked, chain.Concat("Derived type: " + derivedType.FullName));
         }
     }
 
@@ -1410,9 +1303,9 @@ namespace RT.Util.Serialization
             if (options == null)
                 throw new ArgumentNullException("options");
             if (_typeOptions.ContainsKey(type))
-                throw new ArgumentException("Classify options for type {0} have already been defined.".Fmt(type), "type");
+                throw new ArgumentException($"Classify options for type {type} have already been defined.", nameof(type));
             if (_typeOptions.Values.Contains(options))
-                throw new ArgumentException("Must use a different ClassifyTypeOptions instance for every type.", "options");
+                throw new ArgumentException("Must use a different ClassifyTypeOptions instance for every type.", nameof(options));
             bool implementsUsefulInterface = options is IClassifyTypeProcessor
                 || options.GetType().GetInterfaces().Any(i => i.IsGenericType && (i.GetGenericTypeDefinition() == typeof(IClassifyTypeProcessor<>) || i.GetGenericTypeDefinition() == typeof(IClassifySubstitute<,>)));
             bool implementsUselessInterface = options is IClassifyObjectProcessor
@@ -1452,26 +1345,26 @@ namespace RT.Util.Serialization
             var substInterfaces = GetType().GetInterfaces()
                 .Where(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IClassifySubstitute<,>) && t.GetGenericArguments()[0] == type).ToArray();
             if (substInterfaces.Length > 1)
-                throw new ArgumentException("The type {0} implements more than one IClassifySubstitute<{1}, *> interface. Expected at most one.".Fmt(GetType().FullName, type.FullName), "type");
+                throw new ArgumentException($"The type {GetType().FullName} implements more than one IClassifySubstitute<{type.FullName}, *> interface. Expected at most one.", nameof(type));
             else if (substInterfaces.Length == 1)
             {
                 _substituteType = substInterfaces[0].GetGenericArguments()[1];
                 if (type == _substituteType)
-                    throw new InvalidOperationException("The type {0} implements a substitution from type {1} to itself.".Fmt(GetType().FullName, type.FullName));
+                    throw new InvalidOperationException($"The type {GetType().FullName} implements a substitution from type {type.FullName} to itself.");
                 var toSubstMethod = substInterfaces[0].GetMethod("ToSubstitute");
                 var fromSubstMethod = substInterfaces[0].GetMethod("FromSubstitute");
                 _toSubstitute = obj =>
                 {
                     var result = toSubstMethod.Invoke(this, new[] { obj });
                     if (result != null && result.GetType() != _substituteType) // forbidden just in case because I see no use cases for returning a subtype
-                        throw new InvalidOperationException("The method {0} is expected to return an instance of the substitute type, {1}. It returned a subtype, {2}.".Fmt(toSubstMethod, _substituteType.FullName, result.GetType().FullName));
+                        throw new InvalidOperationException($"The method {toSubstMethod} is expected to return an instance of the substitute type, {_substituteType.FullName}. It returned a subtype, {result.GetType().FullName}.");
                     return result;
                 };
                 _fromSubstitute = obj =>
                 {
                     var result = fromSubstMethod.Invoke(this, new[] { obj });
                     if (result != null && result.GetType() != type) // forbidden just in case because I see no use cases for returning a subtype
-                        throw new InvalidOperationException("The method {0} is expected to return an instance of the true type, {1}. It returned a subtype, {2}.".Fmt(fromSubstMethod, type.FullName, result.GetType().FullName));
+                        throw new InvalidOperationException($"The method {fromSubstMethod} is expected to return an instance of the true type, {type.FullName}. It returned a subtype, {result.GetType().FullName}.");
                     return result;
                 };
             }

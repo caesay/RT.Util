@@ -2,19 +2,19 @@
 using System.IO;
 using System.Text;
 
-namespace RT.Util.ExtensionMethods
+namespace RT.Classify.ExtensionMethods
 {
     /// <summary>
     /// Provides extension methods on the <see cref="Stream"/> type.
     /// </summary>
-    public static class StreamExtensions
+    internal static class StreamExtensions
     {
         /// <summary>Reads all bytes until the end of stream and returns them in a byte array.</summary>
         public static byte[] ReadAllBytes(this Stream stream)
         {
             if (stream.CanSeek)
             {
-                return stream.Read((int) (stream.Length - stream.Position));
+                return stream.Read((int)(stream.Length - stream.Position));
             }
             else
             {
@@ -140,10 +140,10 @@ namespace RT.Util.ExtensionMethods
         {
             while (val < -64 || val > 63)
             {
-                stream.WriteByte((byte) (val | 128));
+                stream.WriteByte((byte)(val | 128));
                 val >>= 7;
             }
-            stream.WriteByte((byte) (val & 127));
+            stream.WriteByte((byte)(val & 127));
         }
 
         /// <summary>Encodes a 32-bit unsigned integer in a variable number of bytes, using fewer bytes for smaller values.</summary>
@@ -152,10 +152,10 @@ namespace RT.Util.ExtensionMethods
         {
             while (val >= 128)
             {
-                stream.WriteByte((byte) (val | 128));
+                stream.WriteByte((byte)(val | 128));
                 val >>= 7;
             }
-            stream.WriteByte((byte) val);
+            stream.WriteByte((byte)val);
         }
 
         /// <summary>Encodes a 64-bit signed integer in a variable number of bytes, using fewer bytes for values closer to zero.</summary>
@@ -164,10 +164,10 @@ namespace RT.Util.ExtensionMethods
         {
             while (val < -64 || val > 63)
             {
-                stream.WriteByte((byte) (val | 128));
+                stream.WriteByte((byte)(val | 128));
                 val >>= 7;
             }
-            stream.WriteByte((byte) (val & 127));
+            stream.WriteByte((byte)(val & 127));
         }
 
         /// <summary>Encodes a 64-bit unsigned integer in a variable number of bytes, using fewer bytes for smaller values.</summary>
@@ -176,10 +176,10 @@ namespace RT.Util.ExtensionMethods
         {
             while (val >= 128)
             {
-                stream.WriteByte((byte) (val | 128));
+                stream.WriteByte((byte)(val | 128));
                 val >>= 7;
             }
-            stream.WriteByte((byte) val);
+            stream.WriteByte((byte)val);
         }
 
         /// <summary>Encodes a decimal in a variable number of bytes, using fewer bytes for frequently-occurring low-precision values.</summary>
@@ -195,28 +195,28 @@ namespace RT.Util.ExtensionMethods
         public static void WriteDecimalOptim(this Stream stream, decimal val)
         {
             // .NET allows int[] to be cast to uint[] so just fool C# compiler into accepting this.
-            uint[] bits = (uint[]) (object) decimal.GetBits(val);
+            uint[] bits = (uint[])(object)decimal.GetBits(val);
             uint exponent = (bits[3] >> 16) & 31;
             bool negative = (bits[3] & 0x80000000U) != 0;
 
             var bytes = new byte[12];
-            bytes[0] = (byte) (bits[0]);
-            bytes[1] = (byte) (bits[0] >> 8);
-            bytes[2] = (byte) (bits[0] >> 16);
-            bytes[3] = (byte) (bits[0] >> 24);
+            bytes[0] = (byte)(bits[0]);
+            bytes[1] = (byte)(bits[0] >> 8);
+            bytes[2] = (byte)(bits[0] >> 16);
+            bytes[3] = (byte)(bits[0] >> 24);
             if (bits[1] != 0 || bits[2] != 0)
             {
-                bytes[4] = (byte) (bits[1]);
-                bytes[5] = (byte) (bits[1] >> 8);
-                bytes[6] = (byte) (bits[1] >> 16);
-                bytes[7] = (byte) (bits[1] >> 24);
+                bytes[4] = (byte)(bits[1]);
+                bytes[5] = (byte)(bits[1] >> 8);
+                bytes[6] = (byte)(bits[1] >> 16);
+                bytes[7] = (byte)(bits[1] >> 24);
             }
             if (bits[2] != 0)
             {
-                bytes[8] = (byte) (bits[2]);
-                bytes[9] = (byte) (bits[2] >> 8);
-                bytes[10] = (byte) (bits[2] >> 16);
-                bytes[11] = (byte) (bits[2] >> 24);
+                bytes[8] = (byte)(bits[2]);
+                bytes[9] = (byte)(bits[2] >> 8);
+                bytes[10] = (byte)(bits[2] >> 16);
+                bytes[11] = (byte)(bits[2] >> 24);
             }
 
             // Count the bytes we need to save. This is 12 minus the number of trailing (most significant) zero bytes.
@@ -246,37 +246,38 @@ namespace RT.Util.ExtensionMethods
             get
             {
                 if (_decimalOptimEncodeLUT == null)
-                    _decimalOptimEncodeLUT = Ut.NewArray(
-                        new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 },
-                        new byte[] { 255, 13, 14, 15, 16, 17, 255, 255, 255, 255, 255, 255, 18 },
-                        new byte[] { 255, 19, 20, 21, 22, 23, 255, 255, 255, 255, 255, 255, 24 },
-                        new byte[] { 255, 25, 26, 27, 28, 29, 255, 255, 255, 255, 255, 255, 30 },
-                        new byte[] { 255, 31, 32, 33, 34, 35, 36, 255, 255, 255, 255, 255, 37 },
-                        new byte[] { 255, 38, 39, 40, 41, 42, 43, 255, 255, 255, 255, 255, 44 },
-                        new byte[] { 255, 255, 45, 46, 47, 48, 49, 255, 255, 255, 255, 255, 50 },
-                        new byte[] { 255, 255, 51, 52, 53, 54, 55, 255, 255, 255, 255, 255, 56 },
-                        new byte[] { 255, 255, 255, 57, 58, 255, 255, 59, 255, 255, 255, 255, 60 },
-                        new byte[] { 255, 255, 255, 61, 62, 255, 255, 255, 63, 255, 255, 255, 64 },
-                        new byte[] { 255, 255, 255, 65, 255, 66, 255, 255, 67, 255, 255, 255, 68 },
-                        new byte[] { 255, 255, 255, 69, 255, 255, 70, 255, 71, 255, 255, 255, 72 },
-                        new byte[] { 255, 255, 255, 73, 255, 255, 74, 255, 75, 255, 255, 255, 76 },
-                        new byte[] { 255, 255, 255, 77, 255, 255, 78, 255, 79, 255, 255, 255, 80 },
-                        new byte[] { 255, 255, 255, 81, 255, 255, 82, 255, 83, 255, 255, 255, 84 },
-                        new byte[] { 255, 255, 255, 85, 255, 255, 255, 86, 255, 87, 255, 255, 88 },
-                        new byte[] { 255, 255, 255, 89, 255, 255, 255, 255, 255, 90, 255, 255, 91 },
-                        new byte[] { 255, 255, 255, 255, 92, 255, 255, 255, 255, 93, 255, 255, 94 },
-                        new byte[] { 255, 255, 255, 255, 255, 95, 255, 255, 255, 96, 255, 255, 97 },
-                        new byte[] { 255, 255, 255, 255, 255, 255, 98, 255, 255, 255, 255, 99, 100 },
-                        new byte[] { 255, 255, 255, 255, 255, 255, 101, 255, 255, 255, 255, 102, 103 },
-                        new byte[] { 255, 255, 255, 255, 255, 255, 104, 255, 255, 255, 255, 105, 106 },
-                        new byte[] { 255, 255, 255, 255, 255, 255, 255, 107, 255, 255, 255, 108, 109 },
-                        new byte[] { 255, 255, 255, 255, 255, 255, 255, 255, 110, 255, 255, 111, 112 },
-                        new byte[] { 255, 255, 255, 255, 255, 255, 255, 255, 113, 255, 255, 114, 115 },
-                        new byte[] { 255, 255, 255, 255, 255, 255, 255, 255, 116, 255, 117, 255, 118 },
-                        new byte[] { 255, 255, 255, 255, 255, 255, 255, 255, 119, 255, 120, 255, 121 },
-                        new byte[] { 255, 255, 255, 255, 255, 255, 255, 255, 122, 255, 123, 255, 124 },
-                        new byte[] { 255, 255, 255, 255, 255, 255, 255, 255, 125, 255, 126, 255, 127 }
-                    );
+                    _decimalOptimEncodeLUT = new []
+                    {
+                        new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+                        new byte[] {255, 13, 14, 15, 16, 17, 255, 255, 255, 255, 255, 255, 18},
+                        new byte[] {255, 19, 20, 21, 22, 23, 255, 255, 255, 255, 255, 255, 24},
+                        new byte[] {255, 25, 26, 27, 28, 29, 255, 255, 255, 255, 255, 255, 30},
+                        new byte[] {255, 31, 32, 33, 34, 35, 36, 255, 255, 255, 255, 255, 37},
+                        new byte[] {255, 38, 39, 40, 41, 42, 43, 255, 255, 255, 255, 255, 44},
+                        new byte[] {255, 255, 45, 46, 47, 48, 49, 255, 255, 255, 255, 255, 50},
+                        new byte[] {255, 255, 51, 52, 53, 54, 55, 255, 255, 255, 255, 255, 56},
+                        new byte[] {255, 255, 255, 57, 58, 255, 255, 59, 255, 255, 255, 255, 60},
+                        new byte[] {255, 255, 255, 61, 62, 255, 255, 255, 63, 255, 255, 255, 64},
+                        new byte[] {255, 255, 255, 65, 255, 66, 255, 255, 67, 255, 255, 255, 68},
+                        new byte[] {255, 255, 255, 69, 255, 255, 70, 255, 71, 255, 255, 255, 72},
+                        new byte[] {255, 255, 255, 73, 255, 255, 74, 255, 75, 255, 255, 255, 76},
+                        new byte[] {255, 255, 255, 77, 255, 255, 78, 255, 79, 255, 255, 255, 80},
+                        new byte[] {255, 255, 255, 81, 255, 255, 82, 255, 83, 255, 255, 255, 84},
+                        new byte[] {255, 255, 255, 85, 255, 255, 255, 86, 255, 87, 255, 255, 88},
+                        new byte[] {255, 255, 255, 89, 255, 255, 255, 255, 255, 90, 255, 255, 91},
+                        new byte[] {255, 255, 255, 255, 92, 255, 255, 255, 255, 93, 255, 255, 94},
+                        new byte[] {255, 255, 255, 255, 255, 95, 255, 255, 255, 96, 255, 255, 97},
+                        new byte[] {255, 255, 255, 255, 255, 255, 98, 255, 255, 255, 255, 99, 100},
+                        new byte[] {255, 255, 255, 255, 255, 255, 101, 255, 255, 255, 255, 102, 103},
+                        new byte[] {255, 255, 255, 255, 255, 255, 104, 255, 255, 255, 255, 105, 106},
+                        new byte[] {255, 255, 255, 255, 255, 255, 255, 107, 255, 255, 255, 108, 109},
+                        new byte[] {255, 255, 255, 255, 255, 255, 255, 255, 110, 255, 255, 111, 112},
+                        new byte[] {255, 255, 255, 255, 255, 255, 255, 255, 113, 255, 255, 114, 115},
+                        new byte[] {255, 255, 255, 255, 255, 255, 255, 255, 116, 255, 117, 255, 118},
+                        new byte[] {255, 255, 255, 255, 255, 255, 255, 255, 119, 255, 120, 255, 121},
+                        new byte[] {255, 255, 255, 255, 255, 255, 255, 255, 122, 255, 123, 255, 124},
+                        new byte[] {255, 255, 255, 255, 255, 255, 255, 255, 125, 255, 126, 255, 127}
+                    };
                 return _decimalOptimEncodeLUT;
             }
         }
@@ -295,8 +296,8 @@ namespace RT.Util.ExtensionMethods
             {
                 int read = stream.ReadByte();
                 if (read < 0) throw new InvalidOperationException("Unexpected end of stream (#56384)");
-                b = (byte) read;
-                res = res | ((int) (b & 127) << shifts);
+                b = (byte)read;
+                res = res | ((int)(b & 127) << shifts);
                 shifts += 7;
             }
             // Sign-extend
@@ -316,8 +317,8 @@ namespace RT.Util.ExtensionMethods
             {
                 int read = stream.ReadByte();
                 if (read < 0) throw new InvalidOperationException("Unexpected end of stream (#25753)");
-                b = (byte) read;
-                res = res | ((uint) (b & 127) << shifts);
+                b = (byte)read;
+                res = res | ((uint)(b & 127) << shifts);
                 shifts += 7;
             }
             return res;
@@ -333,8 +334,8 @@ namespace RT.Util.ExtensionMethods
             {
                 int read = stream.ReadByte();
                 if (read < 0) throw new InvalidOperationException("Unexpected end of stream (#16854)");
-                b = (byte) read;
-                res = res | ((long) (b & 127) << shifts);
+                b = (byte)read;
+                res = res | ((long)(b & 127) << shifts);
                 shifts += 7;
             }
             // Sign-extend
@@ -354,8 +355,8 @@ namespace RT.Util.ExtensionMethods
             {
                 int read = stream.ReadByte();
                 if (read < 0) throw new InvalidOperationException("Unexpected end of stream (#64783)");
-                b = (byte) read;
-                res = res | ((ulong) (b & 127) << shifts);
+                b = (byte)read;
+                res = res | ((ulong)(b & 127) << shifts);
                 shifts += 7;
             }
             return res;
@@ -371,10 +372,10 @@ namespace RT.Util.ExtensionMethods
             int len = expolen >> 8;
 
             var bytes = new byte[12];
-            int read = stream.FillBuffer(bytes, 0, (byte) len);
+            int read = stream.FillBuffer(bytes, 0, (byte)len);
             if (read != len) throw new InvalidOperationException("Unexpected end of stream (#94314)");
 
-            return new decimal(BitConverter.ToInt32(bytes, 0), BitConverter.ToInt32(bytes, 4), BitConverter.ToInt32(bytes, 8), negative, (byte) expolen);
+            return new decimal(BitConverter.ToInt32(bytes, 0), BitConverter.ToInt32(bytes, 4), BitConverter.ToInt32(bytes, 8), negative, (byte)expolen);
         }
 
         private static short[] _decimalOptimDecodeLUT;
@@ -385,14 +386,14 @@ namespace RT.Util.ExtensionMethods
             {
                 if (_decimalOptimDecodeLUT == null)
                     _decimalOptimDecodeLUT = new short[] {
-                        0, 256, 512, 768, 1024, 1280, 1536, 1792, 2048, 2304, 2560, 2816, 3072, 257, 513, 769, 1025, 1281, 3073, 
-                        258, 514, 770, 1026, 1282, 3074, 259, 515, 771, 1027, 1283, 3075, 
-                        260, 516, 772, 1028, 1284, 1540, 3076, 261, 517, 773, 1029, 1285, 1541, 3077, 
-                        518, 774, 1030, 1286, 1542, 3078, 519, 775, 1031, 1287, 1543, 3079, 776, 1032, 1800, 3080, 
-                        777, 1033, 2057, 3081, 778, 1290, 2058, 3082, 779, 1547, 2059, 3083, 780, 1548, 2060, 3084, 
-                        781, 1549, 2061, 3085, 782, 1550, 2062, 3086, 783, 1807, 2319, 3087, 784, 2320, 3088, 
-                        1041, 2321, 3089, 1298, 2322, 3090, 1555, 2835, 3091, 1556, 2836, 3092, 1557, 2837, 3093, 1814, 2838, 3094, 
-                        2071, 2839, 3095, 2072, 2840, 3096, 2073, 2585, 3097, 2074, 2586, 3098, 2075, 2587, 3099, 2076, 2588, 3100, 
+                        0, 256, 512, 768, 1024, 1280, 1536, 1792, 2048, 2304, 2560, 2816, 3072, 257, 513, 769, 1025, 1281, 3073,
+                        258, 514, 770, 1026, 1282, 3074, 259, 515, 771, 1027, 1283, 3075,
+                        260, 516, 772, 1028, 1284, 1540, 3076, 261, 517, 773, 1029, 1285, 1541, 3077,
+                        518, 774, 1030, 1286, 1542, 3078, 519, 775, 1031, 1287, 1543, 3079, 776, 1032, 1800, 3080,
+                        777, 1033, 2057, 3081, 778, 1290, 2058, 3082, 779, 1547, 2059, 3083, 780, 1548, 2060, 3084,
+                        781, 1549, 2061, 3085, 782, 1550, 2062, 3086, 783, 1807, 2319, 3087, 784, 2320, 3088,
+                        1041, 2321, 3089, 1298, 2322, 3090, 1555, 2835, 3091, 1556, 2836, 3092, 1557, 2837, 3093, 1814, 2838, 3094,
+                        2071, 2839, 3095, 2072, 2840, 3096, 2073, 2585, 3097, 2074, 2586, 3098, 2075, 2587, 3099, 2076, 2588, 3100,
                     };
                 return _decimalOptimDecodeLUT;
             }

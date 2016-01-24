@@ -4,9 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
-using RT.Util.ExtensionMethods;
 
-namespace RT.Util.Serialization
+namespace RT.Classify
 {
     /// <summary>Offers a convenient way to use <see cref="Classify"/> to serialize objects using the XML format.</summary>
     public static class ClassifyXml
@@ -254,13 +253,13 @@ namespace RT.Util.Serialization
                     return element.Value.CLiteralUnescape();
 
                 case "base64":
-                    return element.Value.Base64UrlDecode().FromUtf8();
+                    return Encoding.UTF8.GetString(Convert.FromBase64String(element.Value));
 
                 case "codepoint":
                     return (char) int.Parse(element.Value);
 
                 default:
-                    throw new InvalidDataException("XmlClassifyFormat does not recognize encoding \"{0}\" on XML tags.".Fmt(enc.Value));
+                    throw new InvalidDataException($"XmlClassifyFormat does not recognize encoding \"{enc.Value}\" on XML tags.");
             }
         }
 
@@ -327,11 +326,18 @@ namespace RT.Util.Serialization
 
         int IClassifyFormat<XElement>.GetReferenceID(XElement element)
         {
-            return ExactConvert.ToInt(
-                element.Attribute("refid").NullOr(a => a.Value) ??
-                element.Attribute("ref").NullOr(a => a.Value) ??
-                Ut.Throw<string>(new InvalidOperationException("The XML Classify format encountered a contractual violation perpetrated by Classify. GetReferenceID() should not be called unless IsReference() or IsReferable() returned true."))
-            );
+            try
+            {
+                return ExactConvert.ToInt(
+                    element.Attribute("refid")?.Value ??
+                    element.Attribute("ref")?.Value);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException("The XML Classify format encountered a contractual violation " +
+                                                    "perpetrated by Classify. GetReferenceID() should not be called " +
+                                                    "unless IsReference() or IsReferable() returned true.", ex);
+            }
         }
 
         XElement IClassifyFormat<XElement>.FormatNullValue()
@@ -427,7 +433,7 @@ namespace RT.Util.Serialization
         string IClassifyFormat<XElement>.GetType(XElement element, out bool isFullType)
         {
             isFullType = element.Attribute("fulltype") != null;
-            return element.Attribute(isFullType ? "fulltype" : "type").NullOr(e => e.Value);
+            return element.Attribute(isFullType ? "fulltype" : "type")?.Value;
         }
 
         XElement IClassifyFormat<XElement>.FormatWithType(XElement element, string type, bool isFullType)
@@ -438,7 +444,12 @@ namespace RT.Util.Serialization
 
         void IClassifyFormat<XElement>.ThrowMissingReferable(int refID)
         {
-            throw new InvalidOperationException(@"An element with the attribute ref=""{0}"" was encountered, but no matching element with the corresponding attribute refid=""{0}"" was encountered during deserialization. If such an attribute is present somewhere in the XML, the relevant element was not deserialized as an object (most likely because a field corresponding to a parent element was removed from its class declaration).".Fmt(refID));
+            throw new InvalidOperationException($"An element with the attribute ref=\"{refID}\" was encountered, " +
+                                                "but no matching element with the corresponding attribute " +
+                                                $"refid=\"{refID}\" was encountered during deserialization. If such an attribute " +
+                                                "is present somewhere in the XML, the relevant element was not deserialized " +
+                                                "as an object (most likely because a field corresponding to a parent element " +
+                                                "was removed from its class declaration).");
         }
     }
 }

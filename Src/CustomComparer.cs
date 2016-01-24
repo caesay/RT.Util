@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace RT.Util
+namespace RT.Classify
 {
     /// <summary>
     ///     Encapsulates an IComparer&lt;T&gt; that uses a comparison function provided as a delegate.</summary>
     /// <typeparam name="T">
     ///     The type of elements to be compared.</typeparam>
-    public sealed class CustomComparer<T> : IComparer<T>
+    internal sealed class CustomComparer<T> : IComparer<T>
     {
         private Comparison<T> _comparison;
         /// <summary>
@@ -134,7 +134,7 @@ namespace RT.Util
     ///     Encapsulates an IEqualityComparer&lt;T&gt; that uses an equality comparison function provided as a delegate.</summary>
     /// <typeparam name="T">
     ///     The type of elements to be compared for equality.</typeparam>
-    public sealed class CustomEqualityComparer<T> : IEqualityComparer<T>
+    internal sealed class CustomEqualityComparer<T> : IEqualityComparer<T>
     {
         private Func<T, T, bool> _comparison;
         private Func<T, int> _getHashCode;
@@ -184,13 +184,14 @@ namespace RT.Util
         ///     override.</param>
         public static CustomEqualityComparer<T> By<TBy>(Func<T, TBy> selector, Func<TBy, TBy, bool> comparison = null, Func<TBy, int> getHashCode = null)
         {
+
             if (selector == null) throw new ArgumentNullException("selector");
             var default_ = EqualityComparer<TBy>.Default;
             var cmp = comparison == null
-                ? Ut.Lambda((T a, T b) => default_.Equals(selector(a), selector(b)))
+                ? new Func<T,T,bool>((T a, T b) => default_.Equals(selector(a), selector(b)))
                 : (a, b) => comparison(selector(a), selector(b));
             var ghc = getHashCode == null
-                ? Ut.Lambda((T a) => default_.GetHashCode(selector(a)))
+                ? new Func<T, int>((T a) => default_.GetHashCode(selector(a)))
                 : a => getHashCode(selector(a));
             return new CustomEqualityComparer<T>(cmp, ghc);
         }

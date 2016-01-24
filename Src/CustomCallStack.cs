@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace RT.Util
+namespace RT.Classify
 {
     /// <summary>
     ///     Provides static functionality to execute work on an unlimited call stack, which is not limited to 1 MB as the
     ///     standard call stack is.</summary>
-    public static class CustomCallStack
+    internal static class CustomCallStack
     {
         /// <summary>
         ///     Runs the specified work on a custom call stack, which is not limited to 1 MB as the standard call stack is.

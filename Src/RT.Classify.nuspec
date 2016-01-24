@@ -8,7 +8,7 @@
     <owners>caesay</owners>
     <projectUrl>https://github.com/caesay/RT.Util</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>A utility library</description>
+    <description>An object serializer</description>
     <copyright>Copyright 2015 Caelan Sayler</copyright>
     <tags>C# Serialization</tags>
   </metadata>

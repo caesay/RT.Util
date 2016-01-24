@@ -3,10 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using RT.Util.ExtensionMethods;
-using RT.Util.Json;
+using System.Text;
+using RT.Classify.ExtensionMethods;
 
-namespace RT.Util.Serialization
+namespace RT.Classify
 {
     /// <summary>Offers a convenient way to use <see cref="Classify"/> to serialize objects using a compact binary format.</summary>
     public static class ClassifyBinary
@@ -265,12 +265,13 @@ namespace RT.Util.Serialization
 
                 if (RefId != null)
                 {
-                    var ix = _reffables.IndexOf(dt);
-                    Ut.Assert(ix >= 0);
+                    var ix = Array.IndexOf(_reffables, dt);
+                    if (ix < 0)
+                        throw new Exception("Internal assertion failure.");
                     dt = _withRefs[ix];
                 }
 
-                stream.WriteByte((byte) (dt | typeSpec));
+                stream.WriteByte((byte)(dt | typeSpec));
 
                 writeToStreamImpl(stream);
 
@@ -303,24 +304,24 @@ namespace RT.Util.Serialization
             {
                 switch (DataType)
                 {
-                    case DataType.Byte: stream.WriteByte((byte) Value); break;
-                    case DataType.SByte: stream.WriteByte((byte) (sbyte) Value); break;
-                    case DataType.Int16: stream.Write(BitConverter.GetBytes((short) Value)); break;
-                    case DataType.UInt16: stream.Write(BitConverter.GetBytes((ushort) Value)); break;
-                    case DataType.Int32: stream.Write(BitConverter.GetBytes((int) Value)); break;
-                    case DataType.UInt32: stream.Write(BitConverter.GetBytes((uint) Value)); break;
-                    case DataType.Single: stream.Write(BitConverter.GetBytes((float) Value)); break;
-                    case DataType.Int64: stream.Write(BitConverter.GetBytes((long) Value)); break;
-                    case DataType.UInt64: stream.Write(BitConverter.GetBytes((ulong) Value)); break;
-                    case DataType.Double: stream.Write(BitConverter.GetBytes((double) Value)); break;
-                    case DataType.DateTime: stream.Write(BitConverter.GetBytes(((DateTime) Value).ToBinary())); break;
-                    case DataType.Decimal: stream.WriteDecimalOptim((decimal) Value); break;
-                    case DataType.String: WriteBuffer(stream, ((string) Value).ToUtf8(), true); break;
-                    case DataType.StringUtf16: WriteBuffer(stream, ((string) Value).ToUtf16(), false); break;
+                    case DataType.Byte: stream.WriteByte((byte)Value); break;
+                    case DataType.SByte: stream.WriteByte((byte)(sbyte)Value); break;
+                    case DataType.Int16: stream.Write(BitConverter.GetBytes((short)Value)); break;
+                    case DataType.UInt16: stream.Write(BitConverter.GetBytes((ushort)Value)); break;
+                    case DataType.Int32: stream.Write(BitConverter.GetBytes((int)Value)); break;
+                    case DataType.UInt32: stream.Write(BitConverter.GetBytes((uint)Value)); break;
+                    case DataType.Single: stream.Write(BitConverter.GetBytes((float)Value)); break;
+                    case DataType.Int64: stream.Write(BitConverter.GetBytes((long)Value)); break;
+                    case DataType.UInt64: stream.Write(BitConverter.GetBytes((ulong)Value)); break;
+                    case DataType.Double: stream.Write(BitConverter.GetBytes((double)Value)); break;
+                    case DataType.DateTime: stream.Write(BitConverter.GetBytes(((DateTime)Value).ToBinary())); break;
+                    case DataType.Decimal: stream.WriteDecimalOptim((decimal)Value); break;
+                    case DataType.String: WriteBuffer(stream, ((string)Value).ToUtf8(), true); break;
+                    case DataType.StringUtf16: WriteBuffer(stream, ((string)Value).ToUtf16(), false); break;
                     case DataType.Null: break;
                     case DataType.False: break;
                     case DataType.True: break;
-                    case DataType.Ref: stream.WriteInt32Optim((int) Value); break;
+                    case DataType.Ref: stream.WriteInt32Optim((int)Value); break;
                 }
             }
         }
@@ -343,7 +344,7 @@ namespace RT.Util.Serialization
             {
                 foreach (var node in List)
                     node.WriteToStream(stream);
-                stream.Write(new byte[] { (byte) DataType.End });
+                stream.Write(new byte[] { (byte)DataType.End });
             }
         }
 
@@ -382,7 +383,7 @@ namespace RT.Util.Serialization
             protected override void writeToStreamImpl(Stream stream)
             {
                 if (DataType == DataType.DictionaryOther)
-                    stream.WriteByte((byte) KeyType);
+                    stream.WriteByte((byte)KeyType);
 
                 foreach (var kvp in Dictionary)
                 {
@@ -403,12 +404,12 @@ namespace RT.Util.Serialization
                         case DataType.DictionaryTwoStrings:
                             if (kvp.Key is string)
                             {
-                                WriteBuffer(stream, ((string) kvp.Key).ToUtf8(), true);
+                                WriteBuffer(stream, ((string)kvp.Key).ToUtf8(), true);
                                 WriteBuffer(stream, new byte[0], true);
                             }
                             else
                             {
-                                var fn = (FieldNameWithType) kvp.Key;
+                                var fn = (FieldNameWithType)kvp.Key;
                                 WriteBuffer(stream, fn.FieldName.ToUtf8(), true);
                                 WriteBuffer(stream, fn.DeclaringType == null ? new byte[0] : fn.DeclaringType.ToUtf8(), true);
                             }
@@ -430,7 +431,7 @@ namespace RT.Util.Serialization
                                     break;
 
                                 case DataType.DateTime:
-                                    stream.Write(BitConverter.GetBytes(((DateTime) kvp.Key).ToBinary()));
+                                    stream.Write(BitConverter.GetBytes(((DateTime)kvp.Key).ToBinary()));
                                     break;
 
                                 case DataType.Decimal:
@@ -450,7 +451,7 @@ namespace RT.Util.Serialization
                             throw new InvalidOperationException("Invalid dictionary type.");
                     }
                 }
-                stream.WriteByte((byte) DataType.End);
+                stream.WriteByte((byte)DataType.End);
             }
         }
 
@@ -480,14 +481,14 @@ namespace RT.Util.Serialization
                             if (b2 != 1)
                                 throw new InvalidOperationException("Invalid binary data format.");
                         }
-                        mem.WriteByte((byte) b);
+                        mem.WriteByte((byte)b);
                     }
                 }
             }
 
             public node ReadFromStream(Stream stream)
             {
-                var dt = (DataType) stream.ReadByte();
+                var dt = (DataType)stream.ReadByte();
                 var ts = dt & DataType.TypeSpecMask;
                 dt &= DataType.Mask;
 
@@ -504,8 +505,8 @@ namespace RT.Util.Serialization
                 switch (dt)
                 {
                     case DataType.End: return null;
-                    case DataType.Byte: node = new valueNode { Value = (byte) stream.ReadByte() }; break;
-                    case DataType.SByte: node = new valueNode { Value = (sbyte) (byte) stream.ReadByte() }; break;
+                    case DataType.Byte: node = new valueNode { Value = (byte)stream.ReadByte() }; break;
+                    case DataType.SByte: node = new valueNode { Value = (sbyte)(byte)stream.ReadByte() }; break;
                     case DataType.Int16: node = new valueNode { Value = BitConverter.ToInt16(stream.Read(2), 0) }; break;
                     case DataType.UInt16: node = new valueNode { Value = BitConverter.ToUInt16(stream.Read(2), 0) }; break;
                     case DataType.Int32: node = new valueNode { Value = BitConverter.ToInt32(stream.Read(4), 0) }; break;
@@ -532,7 +533,7 @@ namespace RT.Util.Serialization
                         break;
 
                     case DataType.DictionaryOther:
-                        keyType = (DataType) stream.ReadByte();
+                        keyType = (DataType)stream.ReadByte();
                         goto case DataType.DictionaryInt64;
 
                     case DataType.DictionaryInt64:
@@ -556,7 +557,7 @@ namespace RT.Util.Serialization
                                 case DataType.DictionaryTwoStrings:
                                     var fieldName = readBuffer(stream, true).FromUtf8();
                                     var declaringType = readBuffer(stream, true).FromUtf8();
-                                    key = declaringType.Length > 0 ? new FieldNameWithType(fieldName, declaringType) : (object) fieldName;
+                                    key = declaringType.Length > 0 ? new FieldNameWithType(fieldName, declaringType) : (object)fieldName;
                                     break;
 
                                 case DataType.DictionaryOther:
@@ -642,7 +643,7 @@ namespace RT.Util.Serialization
                     case DataType.Decimal:
                     case DataType.String:
                     case DataType.StringUtf16:
-                        return ((valueNode) element).Value;
+                        return ((valueNode)element).Value;
 
                     case DataType.List:
                     case DataType.KeyValuePair:
@@ -697,13 +698,13 @@ namespace RT.Util.Serialization
             bool IClassifyFormat<node>.HasField(node element, string fieldName, string declaringType)
             {
                 return element is dictNode && (
-                    ((dictNode) element).Dictionary.ContainsKey(fieldName) ||
-                    ((dictNode) element).Dictionary.ContainsKey(new FieldNameWithType(fieldName, declaringType)));
+                    ((dictNode)element).Dictionary.ContainsKey(fieldName) ||
+                    ((dictNode)element).Dictionary.ContainsKey(new FieldNameWithType(fieldName, declaringType)));
             }
 
             node IClassifyFormat<node>.GetField(node element, string fieldName, string declaringType)
             {
-                var dict = ((dictNode) element).Dictionary;
+                var dict = ((dictNode)element).Dictionary;
                 node node;
 
                 if (dict.TryGetValue(new FieldNameWithType(fieldName, declaringType), out node))
@@ -736,7 +737,7 @@ namespace RT.Util.Serialization
                 if (element.RefId.HasValue)
                     return element.RefId.Value;
                 else if (element.DataType == DataType.Ref)
-                    return (int) ((valueNode) element).Value;
+                    return (int)((valueNode)element).Value;
                 else
                     throw new InvalidOperationException("The binary Classify format encountered a contractual violation perpetrated by Classify. GetReferenceID() should not be called unless IsReference() or IsReferable() returned true.");
             }
@@ -817,7 +818,7 @@ namespace RT.Util.Serialization
 
             node IClassifyFormat<node>.FormatDictionary(IEnumerable<KeyValuePair<object, node>> values)
             {
-                var dic = values.ToDictionary();
+                var dic = values.ToDictionary(v => v.Key, v => v.Value);
                 if (dic.Count == 0)
                     return new dictNode { Dictionary = dic, DataType = DataType.DictionaryString };
 
@@ -839,8 +840,8 @@ namespace RT.Util.Serialization
                     dt = DataType.DictionaryInt64;
                 else if (keyType == typeof(string))
                 {
-                    var utf8len = dic.Keys.Take(32).Sum(k => ((string) k).Utf8Length());
-                    var utf16len = dic.Keys.Take(32).Sum(k => ((string) k).Utf16Length());
+                    var utf8len = dic.Keys.Take(32).Sum(k => ((string)k).Utf8Length());
+                    var utf16len = dic.Keys.Take(32).Sum(k => ((string)k).Utf16Length());
                     if (utf8len > utf16len)
                     {
                         dt = DataType.DictionaryOther;
@@ -873,7 +874,7 @@ namespace RT.Util.Serialization
 
             node IClassifyFormat<node>.FormatObject(IEnumerable<ObjectFieldInfo<node>> fields)
             {
-                var dic = fields.ToDictionary(f => f.DeclaringType == null ? f.FieldName : (object) new FieldNameWithType(f.FieldName, f.DeclaringType), f => f.Value);
+                var dic = fields.ToDictionary(f => f.DeclaringType == null ? f.FieldName : (object)new FieldNameWithType(f.FieldName, f.DeclaringType), f => f.Value);
                 return new dictNode
                 {
                     DataType = dic.Keys.Any(k => k is FieldNameWithType) ? DataType.DictionaryTwoStrings : DataType.DictionaryString,
