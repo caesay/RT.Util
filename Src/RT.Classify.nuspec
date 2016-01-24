@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0"?>
 <package >
   <metadata>
-    <id>RT.Util</id>
+    <id>RT.Classify</id>
     <version>$version$</version>
-    <title>RT.Util</title>
+    <title>RT.Classify</title>
     <authors>caesay rstarkov Timwi</authors>
     <owners>caesay</owners>
     <projectUrl>https://github.com/caesay/RT.Util</projectUrl>

@@ -250,7 +250,7 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <None Include="RT.Util.nuspec" />
+    <None Include="RT.Classify.nuspec" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
