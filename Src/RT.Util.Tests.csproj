@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -78,10 +78,6 @@
     <Compile Include="Ut\GeneralTests.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\RT.NUnitDirect\Src\RT.NUnitDirect.csproj">
-      <Project>{275ECB9D-F75E-45F8-BB34-AD122589D2CC}</Project>
-      <Name>NUnitDirect</Name>
-    </ProjectReference>
     <ProjectReference Include="RT.Util.csproj">
       <Project>{8D0FE79C-AD8D-475C-9E6F-9CAE85365B5D}</Project>
       <Name>Util</Name>
