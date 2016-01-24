@@ -1,0 +1,15 @@
+﻿<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>RT.Util</id>
+    <version>$version$</version>
+    <title>RT.Util</title>
+    <authors>caesay rstarkov Timwi</authors>
+    <owners>caesay</owners>
+    <projectUrl>https://github.com/caesay/RT.Util</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A utility library</description>
+    <copyright>Copyright 2015 Caelan Sayler</copyright>
+    <tags>C# Serialization</tags>
+  </metadata>
+</package>
