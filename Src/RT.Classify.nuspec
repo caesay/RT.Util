@@ -6,10 +6,10 @@
     <title>RT.Classify</title>
     <authors>caesay rstarkov Timwi</authors>
     <owners>caesay</owners>
-    <projectUrl>https://github.com/caesay/RT.Util</projectUrl>
+    <projectUrl>https://github.com/RT-Projects/RT.Util</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>An object serializer</description>
-    <copyright>Copyright 2015 Caelan Sayler</copyright>
+    <description>OBSOLETE - see RT.Util instead.</description>
+    <copyright>Copyright 2015 RT</copyright>
     <tags>C# Serialization</tags>
   </metadata>
 </package>
