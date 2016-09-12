@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace RT.Util.Geometry
 {
-    /// <summary>
-    /// A double-precision class encapsulating a straight line segment connecting two points.
-    /// </summary>
+    /// <summary>A double-precision class encapsulating a straight line segment connecting two points.</summary>
     public struct EdgeD : IEquatable<EdgeD>
     {
         /// <summary>Start point of the line segment.</summary>
@@ -28,7 +24,9 @@ namespace RT.Util.Geometry
             End = new PointD(x2, y2);
         }
 
-        /// <summary>Initialises a line segment starting at the specified point. The ending point is 1 unit away at the specified angle.</summary>
+        /// <summary>
+        ///     Initialises a line segment starting at the specified point. The ending point is 1 unit away at the specified
+        ///     angle.</summary>
         public EdgeD(PointD start, double angle)
         {
             Start = start;
@@ -41,9 +39,12 @@ namespace RT.Util.Geometry
         /// <summary>Returns the difference in the Y-co-ordinates of the start and end point of this <see cref="EdgeD"/>.</summary>
         public double Height { get { return Math.Abs(Start.Y - End.Y); } }
 
-        /// <summary>Determines whether two edges intersect.</summary>
-        /// <param name="r"><see cref="EdgeD"/> to compare against.</param>
-        /// <returns>True if both edges intersect with each other.</returns>
+        /// <summary>
+        ///     Determines whether two edges intersect.</summary>
+        /// <param name="r">
+        ///     <see cref="EdgeD"/> to compare against.</param>
+        /// <returns>
+        ///     True if both edges intersect with each other.</returns>
         public bool IntersectsWith(EdgeD r)
         {
             double mx = End.X - Start.X;
@@ -60,27 +61,38 @@ namespace RT.Util.Geometry
             return (n >= 0 && n < 1 && q >= 0 && q < 1);
         }
 
-        /// <summary>Compares two <see cref="EdgeD"/> objects for equality.</summary>
-        /// <param name="other">Object to compare this one against.</param>
-        /// <returns>True if considered equal.</returns>
+        /// <summary>
+        ///     Compares two <see cref="EdgeD"/> objects for equality.</summary>
+        /// <param name="other">
+        ///     Object to compare this one against.</param>
+        /// <returns>
+        ///     True if considered equal.</returns>
         public bool Equals(EdgeD other)
         {
             return (Start == other.Start && End == other.End) || (Start == other.End && End == other.Start);
         }
 
-        /// <summary>Compares two <see cref="EdgeD"/> objects for equality.</summary>
-        /// <param name="one">First object to compare.</param>
-        /// <param name="other">Object to compare against.</param>
-        /// <returns>True if considered equal.</returns>
+        /// <summary>
+        ///     Compares two <see cref="EdgeD"/> objects for equality.</summary>
+        /// <param name="one">
+        ///     First object to compare.</param>
+        /// <param name="other">
+        ///     Object to compare against.</param>
+        /// <returns>
+        ///     True if considered equal.</returns>
         public static bool operator ==(EdgeD one, EdgeD other)
         {
             return one.Equals(other);
         }
 
-        /// <summary>Compares two <see cref="EdgeD"/> objects for inequality.</summary>
-        /// <param name="one">First object to compare.</param>
-        /// <param name="other">Object to compare against.</param>
-        /// <returns>True if considered different.</returns>
+        /// <summary>
+        ///     Compares two <see cref="EdgeD"/> objects for inequality.</summary>
+        /// <param name="one">
+        ///     First object to compare.</param>
+        /// <param name="other">
+        ///     Object to compare against.</param>
+        /// <returns>
+        ///     True if considered different.</returns>
         public static bool operator !=(EdgeD one, EdgeD other)
         {
             return !one.Equals(other);
@@ -92,27 +104,29 @@ namespace RT.Util.Geometry
             return ToString().GetHashCode();
         }
 
-        /// <summary>Provides a string representation of the current <see cref="EdgeD"/>.</summary>
-        /// <returns>A string representation of the current <see cref="EdgeD"/>.</returns>
+        /// <summary>
+        ///     Provides a string representation of the current <see cref="EdgeD"/>.</summary>
+        /// <returns>
+        ///     A string representation of the current <see cref="EdgeD"/>.</returns>
         public override string ToString()
         {
             return Start + " ⇒ " + End;
         }
 
-        /// <summary>Compares two <see cref="EdgeD"/> objects for equality.</summary>
-        /// <param name="obj">Object to compare against.</param>
-        /// <returns>True if considered equal.</returns>
+        /// <summary>
+        ///     Compares two <see cref="EdgeD"/> objects for equality.</summary>
+        /// <param name="obj">
+        ///     Object to compare against.</param>
+        /// <returns>
+        ///     True if considered equal.</returns>
         public override bool Equals(object obj)
         {
             if (obj is EdgeD)
-                return Equals((EdgeD)obj);
+                return Equals((EdgeD) obj);
             return base.Equals(obj);
         }
 
-        /// <summary>
-        /// Returns a point on this edge that is as near as possible to
-        /// the specified point.
-        /// </summary>
+        /// <summary>Returns a point on this edge that is as near as possible to the specified point.</summary>
         public PointD PointOnEdgeNearestTo(PointD point)
         {
             double lambda = LambdaOfPointDroppedPerpendicularly(point);
@@ -126,11 +140,9 @@ namespace RT.Util.Geometry
         }
 
         /// <summary>
-        /// Calculates the projection of the specified point onto the line defined
-        /// by this edge. Returns the Lambda of this point P, defined by P = Start + Lambda * (End - Start).
-        /// Hence the lambda is 0 if the projection falls exactly onto the Start point, and 1 if it
-        /// falls on the End point.
-        /// </summary>
+        ///     Calculates the projection of the specified point onto the line defined by this edge. Returns the Lambda of
+        ///     this point P, defined by P = Start + Lambda * (End - Start). Hence the lambda is 0 if the projection falls
+        ///     exactly onto the Start point, and 1 if it falls on the End point.</summary>
         public double LambdaOfPointDroppedPerpendicularly(PointD point)
         {
             // Drop the point onto the line defined by:  L = Start + lambda * (End - Start)
@@ -149,7 +161,35 @@ namespace RT.Util.Geometry
             // Now substitute Ndir.X = dir.Y, and Ndir.Y = -dir.X
             // [...]
 
-            return (dir.X*(point.X - Start.X) + dir.Y*(point.Y - Start.Y)) / (dir.X*dir.X + dir.Y*dir.Y);
+            return (dir.X * (point.X - Start.X) + dir.Y * (point.Y - Start.Y)) / (dir.X * dir.X + dir.Y * dir.Y);
+        }
+
+        /// <summary>
+        ///     Returns true if the specified point lies exactly on this edge. Accurate results are not guaranteed on edges
+        ///     which are not axis-aligned.</summary>
+        public bool ContainsPoint(PointD point)
+        {
+            if (Start == point || End == point)
+                return true;
+            if (Start.X == End.X)
+                return (point.X == Start.X) && (point.Y >= Math.Min(Start.Y, End.Y)) && (point.Y <= Math.Max(Start.Y, End.Y));
+            return (point.Y == Start.Y + point.X * (End.Y - Start.Y) / (End.X - Start.X)) && (point.X >= Math.Min(Start.X, End.X)) && (point.X <= Math.Max(Start.X, End.X));
+        }
+
+        /// <summary>
+        ///     Returns the Z component of the cross product of this edge, treated as a vector from <see cref="Start"/> to
+        ///     <see cref="End"/>, with a vector from <see cref="Start"/> to the specified point.</summary>
+        public double CrossZ(PointD point)
+        {
+            return (End - Start).CrossZ(point - Start);
+        }
+
+        /// <summary>
+        ///     Returns the Z component of the cross product of this edge, treated as a vector, with the specified edge, also
+        ///     treated as a vector.</summary>
+        public double CrossZ(EdgeD edge)
+        {
+            return (End - Start).CrossZ(edge.End - edge.Start);
         }
     }
 }
